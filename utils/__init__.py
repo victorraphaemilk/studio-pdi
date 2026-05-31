@@ -1,1 +1,1 @@
-print('test')
+"""Utilitários compartilhados da aplicação."""

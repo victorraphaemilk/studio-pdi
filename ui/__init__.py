@@ -1,1 +1,1 @@
-print('test')
+"""Pacote da interface gráfica."""

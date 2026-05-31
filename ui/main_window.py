@@ -5,19 +5,17 @@ from utils.image_handler import load_image, pil_to_cv, cv_to_pil
 from processing.filters import apply_mean_filter, apply_gaussian_filter, apply_median_filter
 from processing.enhancement import apply_brightness_contrast
 
+
 class StudioPDIApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Studio PDI - Processamento de Imagens")
         self.root.geometry("1000x650")
 
-        # Variáveis de estado
         self.original_image = None
         self.tk_original_image = None
         self.processed_image = None
         self.tk_processed_image = None
-
-        # Guarda qual filtro está selecionado no momento
         self.current_filter = None
 
         self.kernel_value = tk.IntVar(value=5)
@@ -27,9 +25,8 @@ class StudioPDIApp:
         self.setup_ui()
 
     def setup_ui(self):
-        # 1. Menu Superior
         menubar = tk.Menu(self.root)
-        
+
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="Abrir Imagem", command=self.open_file_dialog)
         file_menu.add_separator()
@@ -48,7 +45,6 @@ class StudioPDIApp:
 
         self.root.config(menu=menubar)
 
-        # 2. Frame Principal para imagens (Lado a Lado)
         self.main_frame = tk.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
@@ -58,7 +54,6 @@ class StudioPDIApp:
         self.canvas_processed = tk.Canvas(self.main_frame, bg="darkgray")
         self.canvas_processed.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
 
-        # 3. Frame Inferior para Controles
         self.control_frame = tk.Frame(self.root, pady=10)
         self.control_frame.pack(fill=tk.X, side=tk.BOTTOM)
 

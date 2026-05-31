@@ -1,1 +1,1 @@
-print('test')
+"""Espaço reservado para diálogos auxiliares da interface."""

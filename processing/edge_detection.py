@@ -1,1 +1,1 @@
-print('test')
+"""Espaço reservado para futuros algoritmos de detecção de bordas."""

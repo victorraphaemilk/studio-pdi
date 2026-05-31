@@ -1,1 +1,1 @@
-print('test')
+"""Pacote de processamento de imagem."""
