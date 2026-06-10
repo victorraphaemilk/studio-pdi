@@ -13,6 +13,8 @@ No estado atual do projeto, a aplicação oferece:
 - filtros de suavização por **média**, **gaussiano** e **mediana**;
 - controle de intensidade dos filtros espaciais por **slider de kernel**;
 - modo de **realce por brilho e contraste** com dois sliders dedicados;
+- modo de **detecção de bordas por Laplaciano** com slider próprio;
+- **histograma em tons de cinza** da imagem processada em popup dedicado;
 - processamento sempre refeito a partir da **imagem original**, evitando acúmulo de degradação.
 
 ---
@@ -27,9 +29,10 @@ No estado atual do projeto, a aplicação oferece:
 | `ui\main_window.py` | Janela principal, menus, canvas, sliders e orquestração do fluxo. |
 | `processing\filters.py` | Filtros espaciais de suavização. |
 | `processing\enhancement.py` | Ajuste linear de brilho e contraste. |
-| `utils\image_handler.py` | Conversão entre Pillow e OpenCV, além de carga de imagem. |
 | `processing\edge_detection.py` | Módulo reservado para futuras operações. |
-| `ui\dialogs.py` | Módulo reservado para futuras janelas auxiliares. |
+| `processing\histogram.py` | Cálculo e renderização do histograma em tons de cinza. |
+| `utils\image_handler.py` | Conversão entre Pillow e OpenCV, além de carga de imagem. |
+| `ui\dialogs.py` | Janelas auxiliares, incluindo o popup de histograma. |
 
 ### 2.2 Fluxo da aplicação
 
@@ -57,6 +60,13 @@ main.py
             -> apply_median_filter()
        -> processing\enhancement.py
             -> apply_brightness_contrast()
+      -> processing\edge_detection.py
+          -> apply_laplacian_edge_detection()
+      -> processing\histogram.py
+          -> compute_grayscale_histogram()
+          -> render_grayscale_histogram()
+      -> ui\dialogs.py
+          -> HistogramDialog
 ```
 
 ---
@@ -299,6 +309,42 @@ Detalhes importantes:
 - a imagem é convertida para `float32` antes da conta para evitar overflow durante a multiplicação;
 - `np.clip` limita a saída no intervalo válido de 8 bits;
 - o retorno volta para `uint8`, formato esperado pelo restante do pipeline.
+
+### 3.10 Detecção de bordas por Laplaciano
+
+**Referência:** `processing\edge_detection.py:1-16`
+
+```python
+def apply_laplacian_edge_detection(cv_image, kernel_size=3):
+    """Aplica o operador Laplaciano e retorna a magnitude das bordas em cinza."""
+```
+
+Esse operador segue o mesmo padrão dos outros processamentos do projeto:
+
+- recebe a imagem no formato OpenCV;
+- converte para escala de cinza quando necessário;
+- aplica o kernel Laplaciano com tamanho ímpar;
+- normaliza a saída com `cv2.convertScaleAbs` para exibição segura no canvas.
+
+Na interface, ele aparece em um menu próprio de bordas e usa um slider dedicado no rodapé.
+
+### 3.11 Histograma da imagem processada
+
+**Referências:** `processing\histogram.py:1-33` e `ui\dialogs.py:1-40`
+
+O histograma foi implementado em duas partes:
+
+1. `compute_grayscale_histogram()` calcula a distribuição em tons de cinza da imagem processada.
+2. `render_grayscale_histogram()` desenha essa distribuição em uma imagem OpenCV.
+
+Essa separação mantém a arquitetura limpa: a camada de processamento calcula e desenha; a camada de interface apenas exibe o resultado no popup `HistogramDialog`.
+
+Fluxo de uso:
+
+1. o usuário aplica qualquer processamento na imagem;
+2. escolhe `Análise -> Histograma da Processada` no menu superior;
+3. o popup abre com a distribuição da imagem atual;
+4. se os sliders continuarem sendo movidos, o popup é atualizado automaticamente.
 
 ---
 

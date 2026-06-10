@@ -4,6 +4,8 @@ from PIL import ImageTk
 from utils.image_handler import load_image, pil_to_cv, cv_to_pil
 from processing.filters import apply_mean_filter, apply_gaussian_filter, apply_median_filter
 from processing.enhancement import apply_brightness_contrast
+from processing.edge_detection import apply_laplacian_edge_detection
+from ui.dialogs import HistogramDialog
 
 
 class StudioPDIApp:
@@ -15,12 +17,15 @@ class StudioPDIApp:
         self.original_image = None
         self.tk_original_image = None
         self.processed_image = None
+        self.processed_cv_image = None
         self.tk_processed_image = None
         self.current_filter = None
+        self.histogram_dialog = None
 
         self.kernel_value = tk.IntVar(value=5)
         self.brightness_value = tk.IntVar(value=0)
         self.contrast_value = tk.DoubleVar(value=1.0)
+        self.laplacian_kernel_value = tk.IntVar(value=3)
 
         self.setup_ui()
 
@@ -42,6 +47,14 @@ class StudioPDIApp:
         enhancement_menu = tk.Menu(menubar, tearoff=0)
         enhancement_menu.add_command(label="Brilho e Contraste", command=lambda: self.set_filter("realce"))
         menubar.add_cascade(label="Realce", menu=enhancement_menu)
+
+        edge_menu = tk.Menu(menubar, tearoff=0)
+        edge_menu.add_command(label="Laplaciano", command=lambda: self.set_filter("laplaciano"))
+        menubar.add_cascade(label="Bordas", menu=edge_menu)
+
+        analysis_menu = tk.Menu(menubar, tearoff=0)
+        analysis_menu.add_command(label="Histograma da Processada", command=self.open_histogram_dialog)
+        menubar.add_cascade(label="Análise", menu=analysis_menu)
 
         self.root.config(menu=menubar)
 
@@ -101,6 +114,20 @@ class StudioPDIApp:
         )
         self.contrast_slider.pack(side=tk.LEFT, padx=10)
 
+        self.edge_controls = tk.Frame(self.control_frame)
+        self.laplacian_slider = tk.Scale(
+            self.edge_controls,
+            label="Kernel do Laplaciano (Ímpar)",
+            from_=1,
+            to=7,
+            resolution=2,
+            orient=tk.HORIZONTAL,
+            length=300,
+            variable=self.laplacian_kernel_value,
+            command=self.update_filter_realtime
+        )
+        self.laplacian_slider.pack()
+
         self.update_control_visibility()
 
     def open_file_dialog(self):
@@ -112,10 +139,12 @@ class StudioPDIApp:
             if self.original_image:
                 self.current_filter = None
                 self.processed_image = None
+                self.processed_cv_image = None
                 self.reset_controls()
                 self.update_control_visibility()
                 self.display_original_image()
                 self.canvas_processed.delete("all")
+                self.clear_histogram_dialog()
             else:
                 messagebox.showerror("Erro", "Não foi possível abrir a imagem.")
 
@@ -150,6 +179,7 @@ class StudioPDIApp:
     def update_control_visibility(self):
         self.kernel_controls.pack_forget()
         self.enhancement_controls.pack_forget()
+        self.edge_controls.pack_forget()
 
         if self.current_filter in {"media", "gaussiano", "mediana"}:
             self.control_title.config(text="Ajuste o kernel do filtro selecionado.")
@@ -157,11 +187,15 @@ class StudioPDIApp:
         elif self.current_filter == "realce":
             self.control_title.config(text="Ajuste brilho e contraste sobre a imagem original.")
             self.enhancement_controls.pack()
+        elif self.current_filter == "laplaciano":
+            self.control_title.config(text="Ajuste o kernel do Laplaciano para controlar a detecção de bordas.")
+            self.edge_controls.pack()
         else:
             self.control_title.config(text="Selecione um processamento para habilitar os controles.")
 
     def reset_controls(self):
         self.kernel_value.set(5)
+        self.laplacian_kernel_value.set(3)
         self.reset_enhancement_controls()
 
     def reset_enhancement_controls(self):
@@ -187,11 +221,42 @@ class StudioPDIApp:
             brightness = self.brightness_slider.get()
             contrast = self.contrast_slider.get()
             processed_cv = apply_brightness_contrast(cv_img, brightness, contrast)
+        elif self.current_filter == "laplaciano":
+            kernel_size = self.laplacian_slider.get()
+            processed_cv = apply_laplacian_edge_detection(cv_img, kernel_size)
         else:
             return
 
+        self.processed_cv_image = processed_cv
         self.processed_image = cv_to_pil(processed_cv)
         self.display_processed_image()
+        self.refresh_histogram_dialog()
+
+    def open_histogram_dialog(self):
+        if self.processed_cv_image is None:
+            messagebox.showwarning("Aviso", "Aplique um processamento antes de abrir o histograma.")
+            return
+
+        if self.histogram_dialog and self.histogram_dialog.winfo_exists():
+            self.histogram_dialog.focus_force()
+        else:
+            self.histogram_dialog = HistogramDialog(self.root, on_close=self.handle_histogram_dialog_close)
+
+        self.refresh_histogram_dialog()
+
+    def refresh_histogram_dialog(self):
+        if self.processed_cv_image is None:
+            return
+
+        if self.histogram_dialog and self.histogram_dialog.winfo_exists():
+            self.histogram_dialog.update_histogram(self.processed_cv_image)
+
+    def clear_histogram_dialog(self):
+        if self.histogram_dialog and self.histogram_dialog.winfo_exists():
+            self.histogram_dialog.clear_histogram()
+
+    def handle_histogram_dialog_close(self):
+        self.histogram_dialog = None
 
     def display_processed_image(self):
         canvas_width = self.canvas_processed.winfo_width()
