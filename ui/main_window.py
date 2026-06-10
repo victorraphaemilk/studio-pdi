@@ -2,9 +2,10 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from PIL import ImageTk
 from utils.image_handler import load_image, pil_to_cv, cv_to_pil
-from processing.filters import apply_mean_filter, apply_gaussian_filter, apply_median_filter
+from processing.filters import apply_mean_filter, apply_mean_filter_numpy, apply_gaussian_filter, apply_median_filter
 from processing.enhancement import apply_brightness_contrast
 from processing.edge_detection import apply_laplacian_edge_detection
+
 from ui.dialogs import HistogramDialog
 
 
@@ -39,7 +40,8 @@ class StudioPDIApp:
         menubar.add_cascade(label="Arquivo", menu=file_menu)
 
         filter_menu = tk.Menu(menubar, tearoff=0)
-        filter_menu.add_command(label="Média", command=lambda: self.set_filter("media"))
+        filter_menu.add_command(label="Média (CV2)", command=lambda: self.set_filter("media"))
+        filter_menu.add_command(label="Média (NumPy)", command=lambda: self.set_filter("media_numpy"))
         filter_menu.add_command(label="Gaussiano", command=lambda: self.set_filter("gaussiano"))
         filter_menu.add_command(label="Mediana", command=lambda: self.set_filter("mediana"))
         menubar.add_cascade(label="Filtros (Suavização)", menu=filter_menu)
@@ -211,6 +213,9 @@ class StudioPDIApp:
         if self.current_filter == "media":
             kernel_size = self.kernel_slider.get()
             processed_cv = apply_mean_filter(cv_img, kernel_size)
+        elif self.current_filter == "media_numpy":
+            kernel_size = self.kernel_slider.get()
+            processed_cv = apply_mean_filter_numpy(cv_img, kernel_size)
         elif self.current_filter == "gaussiano":
             kernel_size = self.kernel_slider.get()
             processed_cv = apply_gaussian_filter(cv_img, kernel_size)
